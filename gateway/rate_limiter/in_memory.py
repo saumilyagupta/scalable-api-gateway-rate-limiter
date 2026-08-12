@@ -6,6 +6,14 @@ from gateway.rate_limiter.base import Decision, RateLimiter
 
 
 class InMemoryTokenBucketLimiter(RateLimiter):
+    """Degraded-mode fallback used only while ResilientRedisLimiter's Redis
+    circuit breaker is open. State is per-process and non-persistent — it
+    resets on restart and is NOT shared across gateway replicas, unlike the
+    Redis-backed limiters. A single lock across all keys is intentional: the
+    critical section has no `await` points, so it never blocks on I/O and
+    contention is bookkeeping-only regardless of request volume — this is a
+    rare-path fallback, not the hot path."""
+
     def __init__(self, capacity: int, refill_rate_per_second: float) -> None:
         if capacity <= 0:
             raise ValueError(f"capacity must be positive, got {capacity}")
