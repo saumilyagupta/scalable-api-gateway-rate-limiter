@@ -35,8 +35,10 @@ class UpstreamCaller:
         try:
             return await self._call_with_retry(stub_method, request)
         except pybreaker.CircuitBreakerError as exc:
+            logger.warning("%s circuit open, rejecting call", self._service_name)
             raise UpstreamCallerError(f"{self._service_name} circuit open") from exc
         except Exception as exc:  # noqa: BLE001 - normalized into a single caller-facing error type
+            logger.warning("%s call failed: %s", self._service_name, exc)
             raise UpstreamCallerError(f"{self._service_name} call failed: {exc}") from exc
 
     @upstream_retry()

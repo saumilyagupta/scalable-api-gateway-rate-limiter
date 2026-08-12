@@ -29,3 +29,19 @@ async def test_raises_upstream_caller_error_when_breaker_open():
 
     with pytest.raises(UpstreamCallerError):
         await caller.call(always_fails, "hi")
+
+
+async def test_raises_upstream_caller_error_on_retry_exhaustion_without_tripping_breaker():
+    async def always_fails(request):
+        raise ConnectionError("upstream down")
+
+    # fail_max high enough that 3 retry attempts (upstream_retry's
+    # stop_after_attempt(3)) never trip the breaker -- this exercises the
+    # generic `except Exception` branch, not the CircuitBreakerError one.
+    breaker = pybreaker.CircuitBreaker(fail_max=10, reset_timeout=60)
+    caller = UpstreamCaller("echo-test-exhausted", breaker=breaker)
+
+    with pytest.raises(UpstreamCallerError, match="call failed"):
+        await caller.call(always_fails, "hi")
+
+    assert breaker.current_state == "closed"
