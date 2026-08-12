@@ -15,4 +15,7 @@ COPY demo_services ./demo_services
 COPY gateway/generated ./gateway/generated
 COPY gateway/__init__.py ./gateway/__init__.py
 
+# Runs as root: acceptable for this project's documented scope (demo,
+# docker-compose/localhost network, no public exposure) -- not hardened
+# for production deployment.
 ENV PYTHONUNBUFFERED=1

@@ -13,5 +13,8 @@ RUN pip install --no-cache-dir grpcio-tools==1.66.2 && \
 
 COPY gateway ./gateway
 
+# Runs as root: acceptable for this project's documented scope (demo,
+# docker-compose/localhost network, no public exposure) -- not hardened
+# for production deployment.
 ENV PYTHONUNBUFFERED=1
 CMD ["python", "-m", "gateway.server"]
