@@ -1,8 +1,11 @@
 import asyncio
+import logging
 import os
 from dataclasses import dataclass
 
 import yaml
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -62,6 +65,11 @@ class PolicyRegistry:
         self._mtime = os.path.getmtime(self._path)
 
     def resolve(self, client_key: str, method: str) -> Policy:
+        # Safe without a lock: `_load()` reassigns `self._policies`/`self._default`
+        # to new objects rather than mutating in place, and both this method and
+        # `_load()` run on the same asyncio event loop thread with no `await` in
+        # between the read and the return — resolve() always sees a fully-old or
+        # fully-new snapshot, never a torn one.
         for policy in self._policies:
             if client_key.startswith(policy.client_key_prefix) and policy.method == method:
                 return policy
@@ -74,9 +82,14 @@ class PolicyRegistry:
             try:
                 current_mtime = os.path.getmtime(self._path)
             except OSError:
+                logger.warning(
+                    "policy file %s unreachable, continuing to serve last-known policies",
+                    self._path,
+                )
                 continue
             if current_mtime != self._mtime:
                 self._load()
+                logger.info("reloaded policies from %s", self._path)
 
     def stop_watching(self) -> None:
         self._watching = False
