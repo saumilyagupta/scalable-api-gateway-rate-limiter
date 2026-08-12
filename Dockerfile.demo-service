@@ -1,0 +1,18 @@
+FROM python:3.11-slim AS base
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY protos ./protos
+COPY scripts ./scripts
+RUN pip install --no-cache-dir grpcio-tools==1.66.2 && \
+    mkdir -p gateway/generated && touch gateway/generated/__init__.py && \
+    bash scripts/gen_protos.sh
+
+COPY demo_services ./demo_services
+COPY gateway/generated ./gateway/generated
+COPY gateway/__init__.py ./gateway/__init__.py
+
+ENV PYTHONUNBUFFERED=1
