@@ -11,7 +11,14 @@ local count = redis.call("ZCARD", key)
 
 local allowed = 0
 if count < limit then
-  local member = tostring(now) .. "-" .. tostring(math.random())
+  -- Redis reseeds Lua's PRNG deterministically per script invocation (for
+  -- effects-replication determinism), so math.random() is not guaranteed to
+  -- differ between separate calls. A per-key INCR counter guarantees a
+  -- unique ZSET member even when two calls land on the same microsecond.
+  local seq_key = key .. ":seq"
+  local seq = redis.call("INCR", seq_key)
+  redis.call("EXPIRE", seq_key, math.ceil(window) + 1)
+  local member = tostring(now) .. "-" .. tostring(seq)
   redis.call("ZADD", key, now, member)
   count = count + 1
   allowed = 1
