@@ -12,7 +12,9 @@ logger = logging.getLogger("greeter-service")
 
 
 class GreeterServicer(demo_pb2_grpc.GreeterServicer):
-    async def Greet(self, request, context):
+    async def Greet(
+        self, request: demo_pb2.GreetRequest, context: grpc.aio.ServicerContext
+    ) -> demo_pb2.GreetResponse:
         try:
             await maybe_inject_failure()
         except RuntimeError as exc:

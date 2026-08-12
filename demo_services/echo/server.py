@@ -12,7 +12,9 @@ logger = logging.getLogger("echo-service")
 
 
 class EchoServicer(demo_pb2_grpc.EchoServicer):
-    async def Echo(self, request, context):
+    async def Echo(
+        self, request: demo_pb2.EchoRequest, context: grpc.aio.ServicerContext
+    ) -> demo_pb2.EchoResponse:
         try:
             await maybe_inject_failure()
         except RuntimeError as exc:
