@@ -38,6 +38,10 @@ def build_server(
         ]
     )
 
+    # Insecure by design, not oversight: this gateway is meant to run inside a
+    # docker-compose network / localhost for demo purposes, per the project's
+    # documented scope (see design spec's "Out of scope" section). Not for
+    # public exposure without adding TLS.
     echo_channel = grpc.aio.insecure_channel(echo_upstream_addr)
     echo_stub = demo_pb2_grpc.EchoStub(echo_channel)
     demo_pb2_grpc.add_EchoServicer_to_server(EchoProxyServicer(echo_stub), server)
@@ -68,10 +72,9 @@ async def serve() -> None:
     )
 
     watch_task = asyncio.create_task(policy_registry.start_watching())
-
-    await server.start()
-    logger.info("gateway listening on %s", grpc_port)
     try:
+        await server.start()
+        logger.info("gateway listening on %s", grpc_port)
         await server.wait_for_termination()
     finally:
         policy_registry.stop_watching()
