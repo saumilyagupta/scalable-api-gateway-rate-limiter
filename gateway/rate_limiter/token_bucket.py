@@ -16,6 +16,12 @@ class TokenBucketLimiter(RateLimiter):
         refill_rate_per_second: float,
         key_prefix: str = "tb",
     ) -> None:
+        if capacity <= 0:
+            raise ValueError(f"capacity must be positive, got {capacity}")
+        if refill_rate_per_second < 0:
+            raise ValueError(
+                f"refill_rate_per_second must be non-negative, got {refill_rate_per_second}"
+            )
         self._redis = redis_client
         self._capacity = capacity
         self._refill_rate = refill_rate_per_second

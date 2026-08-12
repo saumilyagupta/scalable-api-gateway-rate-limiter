@@ -24,7 +24,7 @@ if tokens >= requested then
   allowed = 1
 end
 
-redis.call("HMSET", key, "tokens", tostring(tokens), "ts", tostring(now))
+redis.call("HSET", key, "tokens", tostring(tokens), "ts", tostring(now))
 local ttl = 60
 if refill_rate > 0 then
   ttl = math.max(60, math.ceil(capacity / refill_rate) + 1)
