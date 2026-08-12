@@ -1,0 +1,7 @@
+grpcio==1.66.2
+grpcio-tools==1.66.2
+redis==5.0.8
+PyYAML==6.0.2
+prometheus-client==0.20.0
+pybreaker==1.2.0
+tenacity==9.0.0
