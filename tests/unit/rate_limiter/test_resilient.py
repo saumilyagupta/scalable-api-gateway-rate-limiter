@@ -38,12 +38,18 @@ async def test_falls_back_when_breaker_opens():
     breaker = make_breaker(fail_max=2)
     limiter = ResilientRedisLimiter(inner, fallback, breaker)
 
-    # Exhaust the breaker's failure budget through the limiter itself.
+    # With fail_max=2, the breaker actually trips inside the FIRST call below:
+    # redis_retry() retries on the initial ConnectionError, and that retry's
+    # second attempt is what pushes the failure counter to fail_max, which
+    # raises CircuitBreakerError immediately (retry does not retry that error
+    # itself). Both loop iterations still fall back correctly either way —
+    # this loop isn't asserting exactly when the trip happens, just that
+    # every call is served via fallback regardless.
     for _ in range(2):
         result = await limiter.allow("client-b")
-        assert result.remaining == 99  # retry exhausts, falls back to in-memory each time
+        assert result.remaining == 99
 
-    # Breaker should now be open; next call must not even try inner.
+    # Breaker is open by now; next call must not even try inner.
     inner.calls = 0
     result = await limiter.allow("client-b")
     assert result.remaining == 99
