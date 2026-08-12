@@ -31,16 +31,26 @@ class LimiterFactory:
 
     def _build_inner(self, policy: Policy) -> RateLimiter:
         if policy.algorithm == "token_bucket":
+            if policy.refill_rate_per_second is None:
+                raise ValueError(
+                    f"policy for {policy.method} uses token_bucket but has no "
+                    "refill_rate_per_second configured"
+                )
             return TokenBucketLimiter(
                 self._redis,
                 capacity=policy.limit,
-                refill_rate_per_second=policy.refill_rate_per_second or 0.0,
+                refill_rate_per_second=policy.refill_rate_per_second,
             )
         if policy.algorithm == "sliding_window_log":
+            if policy.window_seconds is None:
+                raise ValueError(
+                    f"policy for {policy.method} uses sliding_window_log but has no "
+                    "window_seconds configured"
+                )
             return SlidingWindowLogLimiter(
                 self._redis,
                 limit=policy.limit,
-                window_seconds=policy.window_seconds or 1.0,
+                window_seconds=policy.window_seconds,
             )
         raise ValueError(f"unknown algorithm: {policy.algorithm}")
 
