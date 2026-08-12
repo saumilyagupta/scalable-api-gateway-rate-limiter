@@ -21,6 +21,11 @@ class RateLimitInterceptor(grpc.aio.ServerInterceptor):
         continuation: Callable[[grpc.HandlerCallDetails], Awaitable[grpc.RpcMethodHandler]],
         handler_call_details: grpc.HandlerCallDetails,
     ) -> grpc.RpcMethodHandler:
+        # dict() over duplicate "api-key" headers keeps the last value. That
+        # only affects which quota bucket a request lands in here (no auth
+        # layer trusts this key yet) -- revisit if/when an auth interceptor
+        # is added, since duplicate-header handling is a classic smuggling
+        # pitfall once a key is used for anything security-sensitive.
         metadata = dict(handler_call_details.invocation_metadata or [])
         api_key = metadata.get("api-key", "anonymous")
         method = handler_call_details.method
@@ -40,4 +45,7 @@ class RateLimitInterceptor(grpc.aio.ServerInterceptor):
             context.set_trailing_metadata((("retry-after", str(reset_after)),))
             await context.abort(grpc.StatusCode.RESOURCE_EXHAUSTED, "rate limit exceeded")
 
+        # grpc.aio has no unary_unary_rpc_method_handler; the top-level grpc
+        # module's version builds the same RpcMethodHandler and works fine
+        # here since `deny` is itself a coroutine function.
         return grpc.unary_unary_rpc_method_handler(deny)
