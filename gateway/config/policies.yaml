@@ -1,0 +1,25 @@
+policies:
+  - client_key_prefix: "free-"
+    method: "/demo.Echo/Echo"
+    algorithm: token_bucket
+    limit: 50
+    refill_rate_per_second: 50
+  - client_key_prefix: "paid-"
+    method: "/demo.Echo/Echo"
+    algorithm: sliding_window_log
+    limit: 500
+    window_seconds: 1
+  - client_key_prefix: "free-"
+    method: "/demo.Greeter/Greet"
+    algorithm: token_bucket
+    limit: 20
+    refill_rate_per_second: 20
+  - client_key_prefix: "paid-"
+    method: "/demo.Greeter/Greet"
+    algorithm: sliding_window_log
+    limit: 200
+    window_seconds: 1
+default:
+  algorithm: token_bucket
+  limit: 10
+  refill_rate_per_second: 10
