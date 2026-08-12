@@ -10,9 +10,18 @@ class MetricsInterceptor(grpc.aio.ServerInterceptor):
     """Wraps the real handler's unary_unary behavior with a latency timer.
 
     Unlike RateLimitInterceptor, this interceptor always calls `continuation`
-    first to obtain the real handler, then wraps its behavior -- this
-    measures actual request-handling latency (including any work done by
-    interceptors chained before this one, plus the real handler's work).
+    first to obtain the real handler, then wraps only that handler's own
+    execution -- NOT the time continuation() itself took to resolve. In
+    grpc.aio's interceptor chain, continuation() fully resolves (running any
+    interceptors ahead of this one, e.g. RateLimitInterceptor's policy lookup
+    and Redis round trip) before this returns, and that time is NOT captured
+    here. This metric measures the final handler's latency only.
+
+    Two consequences worth knowing when interpreting this metric against a
+    p99 SLA claim: it reads faster than true end-to-end request latency
+    (gateway-side overhead like the rate-limit check is excluded), and denied
+    requests never reach here at all since RateLimitInterceptor short-circuits
+    without calling continuation() -- only allowed requests are observed.
     """
 
     async def intercept_service(
