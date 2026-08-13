@@ -23,7 +23,7 @@ rate_limit_decisions_total = Counter(
 breaker_state_transitions_total = Counter(
     "gateway_breaker_state_transitions_total",
     "Count of circuit breaker state transitions",
-    ["breaker", "state"],  # state: "open" | "closed" | "half_open"
+    ["breaker", "state"],  # state: "open" | "closed" | "half-open" (pybreaker's own naming)
 )
 
 retry_attempts_total = Counter(

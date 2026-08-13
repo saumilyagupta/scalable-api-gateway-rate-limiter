@@ -1,5 +1,6 @@
 import pytest
 
+from gateway.metrics import breaker_state_transitions_total
 from gateway.reliability.circuit_breaker import get_redis_breaker, get_upstream_breaker
 
 
@@ -42,3 +43,27 @@ async def test_breaker_opens_after_failure_threshold():
 
     with pytest.raises(pybreaker.CircuitBreakerError):
         await breaker.call_async(always_fails)
+
+
+async def test_breaker_open_transition_increments_metric():
+    breaker = get_upstream_breaker("test-service-for-metric")
+
+    async def always_fails():
+        raise RuntimeError("boom")
+
+    import pybreaker
+
+    before = breaker_state_transitions_total.labels(
+        breaker="upstream:test-service-for-metric", state="open"
+    )._value.get()
+
+    for _ in range(breaker.fail_max - 1):
+        with pytest.raises(RuntimeError):
+            await breaker.call_async(always_fails)
+    with pytest.raises(pybreaker.CircuitBreakerError):
+        await breaker.call_async(always_fails)
+
+    after = breaker_state_transitions_total.labels(
+        breaker="upstream:test-service-for-metric", state="open"
+    )._value.get()
+    assert after == before + 1
