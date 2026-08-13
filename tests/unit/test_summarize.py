@@ -22,3 +22,17 @@ def test_format_summary_extracts_key_metrics(tmp_path):
     assert "1333" in summary
     assert "p99" in summary
     assert "45.00ms" in summary or "45ms" in summary
+    assert "WARNING" not in summary
+
+
+def test_format_summary_warns_on_truncated_result_file(tmp_path):
+    # Simulates a ghz run that crashed mid-write: no "rps" or "count" key.
+    payload = {"latencyDistribution": [], "statusCodeDistribution": {}}
+    path = tmp_path / "result.json"
+    path.write_text(json.dumps(payload))
+
+    summary = format_summary(str(path))
+
+    assert "WARNING" in summary
+    assert "count" in summary
+    assert "rps" in summary
