@@ -96,6 +96,18 @@ async def test_keeps_serving_last_known_policies_when_file_becomes_unreachable(t
 
         # Watch loop must not crash, and must keep serving the last-known policy.
         assert registry.resolve("free-client-1", "/demo.Echo/Echo").limit == 50
+        assert not watch_task.done()  # loop is still alive, not silently dead
+
+        # Prove it, not just assert it isn't dead yet: restore the file and
+        # confirm the loop is still actually polling (would also pass if the
+        # except-OSError branch were deleted and getmtime() just never raised
+        # again, but combined with the not-done check above this rules out
+        # "the task died on the first poll and never ran again").
+        updated = YAML_CONTENT.replace("limit: 50", "limit: 777")
+        time.sleep(0.05)  # ensure mtime advances on filesystems with 1s resolution edge cases
+        _write(path, updated)
+        await asyncio.sleep(0.2)
+        assert registry.resolve("free-client-1", "/demo.Echo/Echo").limit == 777
     finally:
         registry.stop_watching()
         watch_task.cancel()
