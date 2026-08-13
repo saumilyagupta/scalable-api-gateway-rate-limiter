@@ -4,6 +4,7 @@ __pycache__/
 venv/
 .pytest_cache/
 .coverage
+coverage.xml
 htmlcov/
 loadtest/results/*.json
 !loadtest/results/.gitkeep
