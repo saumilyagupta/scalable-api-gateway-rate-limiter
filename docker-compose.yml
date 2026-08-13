@@ -14,8 +14,8 @@ services:
     command: ["python", "-m", "demo_services.echo.server"]
     environment:
       GRPC_PORT: "60051"
-      FAILURE_RATE: "0"
-      EXTRA_LATENCY_MS: "0"
+      FAILURE_RATE: "${FAILURE_RATE:-0}"
+      EXTRA_LATENCY_MS: "${EXTRA_LATENCY_MS:-0}"
     # No host port publish: only consumed internally by gateway-1/gateway-2
     # over the compose network, and publishing risks colliding with an
     # unrelated host process on this port.
@@ -32,8 +32,8 @@ services:
     command: ["python", "-m", "demo_services.greeter.server"]
     environment:
       GRPC_PORT: "60052"
-      FAILURE_RATE: "0"
-      EXTRA_LATENCY_MS: "0"
+      FAILURE_RATE: "${FAILURE_RATE:-0}"
+      EXTRA_LATENCY_MS: "${EXTRA_LATENCY_MS:-0}"
     # No host port publish: only consumed internally by gateway-1/gateway-2
     # over the compose network.
     healthcheck:
