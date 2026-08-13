@@ -9,6 +9,21 @@ from gateway.rate_limiter.token_bucket import TokenBucketLimiter
 from gateway.reliability.circuit_breaker import get_redis_breaker
 
 
+def _redis_key_prefix(policy: Policy) -> str:
+    """Namespaces each policy's Redis keys by method + its numeric shape.
+
+    Without this, every token-bucket (or every sliding-window) policy shares
+    one bucket per client regardless of which gRPC method it's for -- two
+    unrelated per-route policies for the same client would silently drain
+    the same quota. It also means a hot-reloaded policy (new limit/refill)
+    gets a fresh bucket instead of inheriting a stale, possibly-exhausted
+    one left over from the old config.
+    """
+    if policy.algorithm == "token_bucket":
+        return f"tb:{policy.method}:{policy.limit}:{policy.refill_rate_per_second}"
+    return f"swl:{policy.method}:{policy.limit}:{policy.window_seconds}"
+
+
 class LimiterFactory:
     """Builds a resilient RateLimiter for a given Policy, caching one instance
     per distinct policy so token-bucket/window state accumulates correctly
@@ -40,6 +55,7 @@ class LimiterFactory:
                 self._redis,
                 capacity=policy.limit,
                 refill_rate_per_second=policy.refill_rate_per_second,
+                key_prefix=_redis_key_prefix(policy),
             )
         if policy.algorithm == "sliding_window_log":
             if policy.window_seconds is None:
@@ -51,6 +67,7 @@ class LimiterFactory:
                 self._redis,
                 limit=policy.limit,
                 window_seconds=policy.window_seconds,
+                key_prefix=_redis_key_prefix(policy),
             )
         raise ValueError(f"unknown algorithm: {policy.algorithm}")
 
