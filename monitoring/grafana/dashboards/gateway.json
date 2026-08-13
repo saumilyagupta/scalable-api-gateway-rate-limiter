@@ -6,7 +6,7 @@
   "panels": [
     {
       "type": "graph",
-      "title": "Request rate (req/s)",
+      "title": "Allowed request rate (req/s, excludes rate-limit denials)",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
       "targets": [
         { "expr": "sum(rate(gateway_request_latency_seconds_count[1m])) by (method)" }
@@ -34,6 +34,14 @@
       "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
       "targets": [
         { "expr": "sum(rate(gateway_breaker_state_transitions_total[1m])) by (breaker, state)" }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Retry attempts",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        { "expr": "sum(rate(gateway_retry_attempts_total[1m])) by (target)" }
       ]
     }
   ]
