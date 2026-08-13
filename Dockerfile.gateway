@@ -5,12 +5,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY protos ./protos
-COPY scripts ./scripts
-RUN pip install --no-cache-dir grpcio-tools==1.66.2 && \
-    mkdir -p gateway/generated && touch gateway/generated/__init__.py && \
-    bash scripts/gen_protos.sh
-
+# gateway/generated/ (protobuf stubs) is committed to the repo and copied
+# as-is below -- regenerating here would be dead work, since the later
+# `COPY gateway ./gateway` always overwrites any freshly generated stubs
+# with the committed ones anyway. Only regenerate locally via
+# scripts/gen_protos.sh after editing protos/demo.proto, then commit.
 COPY gateway ./gateway
 
 # Runs as root: acceptable for this project's documented scope (demo,

@@ -1,5 +1,5 @@
 grpcio==1.66.2
-grpcio-tools==1.66.2
+protobuf==5.29.6  # runtime dep of gateway/generated/*.py; grpcio-tools (dev-only) previously pulled this in transitively
 redis==5.0.8
 PyYAML==6.0.2
 prometheus-client==0.20.0

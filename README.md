@@ -79,8 +79,6 @@ Requires Docker running locally (testcontainers spins a real Redis for limiter/i
 ./scripts/gen_protos.sh
 ```
 
-> Note: regenerating requires a `protobuf` runtime version compatible with whatever `protoc` binary `grpcio-tools` bundles for your platform — the pinned `grpcio-tools==1.66.2` has been observed to bundle a `protoc` release ahead of the `protobuf<6.0,>=5.26.1` range it declares as its own dependency. If regeneration fails with a `google.protobuf.runtime_version.VersionError`, that's this mismatch, not a bug in this project's code — `git checkout -- gateway/generated/` to restore the committed, working stubs.
-
 ## Load testing
 
 Requires [`ghz`](https://ghz.sh/) installed locally and the stack running via `docker-compose up`.
