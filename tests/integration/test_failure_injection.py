@@ -3,6 +3,7 @@ import redis.asyncio as aioredis  # noqa: F401
 
 from gateway.rate_limiter.factory import LimiterFactory
 from gateway.rate_limiter.policy import Policy
+from gateway.reliability.circuit_breaker import get_redis_breaker
 
 
 class _AlwaysBrokenRedis:
@@ -33,6 +34,14 @@ async def test_falls_open_to_in_memory_limiter_when_redis_is_down():
 
 
 async def test_recovers_once_redis_is_healthy_again(redis_client):
+    # get_redis_breaker() is a process-wide singleton, so the previous test
+    # tripping it OPEN would otherwise leak in here: within reset_timeout the
+    # breaker would still short-circuit to CircuitBreakerError and this
+    # request would be served by the in-memory fallback instead of real
+    # Redis, letting the assertion pass without ever exercising recovery.
+    # Force it closed so this test actually proves the real-Redis path.
+    get_redis_breaker().close()
+
     factory = LimiterFactory(redis_client)
     policy = Policy(
         client_key_prefix="free-",
@@ -46,3 +55,4 @@ async def test_recovers_once_redis_is_healthy_again(redis_client):
     decision = await limiter.allow("client-b")
 
     assert decision.allowed is True
+    assert get_redis_breaker().current_state == "closed"
