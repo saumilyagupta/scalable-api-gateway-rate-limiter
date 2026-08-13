@@ -5,6 +5,24 @@ import pytest_asyncio
 import redis.asyncio as aioredis
 from testcontainers.redis import RedisContainer
 
+from gateway.reliability import circuit_breaker as _circuit_breaker
+
+
+@pytest.fixture(autouse=True)
+def _reset_breakers() -> Iterator[None]:
+    # get_redis_breaker()/get_upstream_breaker() are process-wide singletons
+    # (by design -- see gateway/rate_limiter/factory.py), so any test that
+    # trips one open leaves it open for up to its reset_timeout for whatever
+    # test runs next in the same session, silently routing calls through a
+    # fallback instead of the real thing without failing any assertion.
+    # Force every breaker closed before each test so behavior doesn't depend
+    # on collection order.
+    if _circuit_breaker._redis_breaker is not None:
+        _circuit_breaker._redis_breaker.close()
+    for breaker in _circuit_breaker._upstream_breakers.values():
+        breaker.close()
+    yield
+
 
 @pytest.fixture(scope="session")
 def redis_container() -> Iterator[RedisContainer]:
