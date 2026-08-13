@@ -9,6 +9,14 @@ from gateway.rate_limiter.token_bucket import TokenBucketLimiter
 from gateway.reliability.circuit_breaker import get_redis_breaker
 
 
+def _fmt_number(value: float | None) -> str:
+    # YAML parses "50" as int and "50.0" as float; str() renders those
+    # differently ("50" vs "50.0"). Normalizing through float + ":g" makes
+    # the key stable across that notation difference, so a purely cosmetic
+    # config edit can't silently orphan every client's bucket for a route.
+    return "none" if value is None else f"{float(value):g}"
+
+
 def _redis_key_prefix(policy: Policy) -> str:
     """Namespaces each policy's Redis keys by method + its numeric shape.
 
@@ -20,8 +28,8 @@ def _redis_key_prefix(policy: Policy) -> str:
     one left over from the old config.
     """
     if policy.algorithm == "token_bucket":
-        return f"tb:{policy.method}:{policy.limit}:{policy.refill_rate_per_second}"
-    return f"swl:{policy.method}:{policy.limit}:{policy.window_seconds}"
+        return f"tb:{policy.method}:{policy.limit}:{_fmt_number(policy.refill_rate_per_second)}"
+    return f"swl:{policy.method}:{policy.limit}:{_fmt_number(policy.window_seconds)}"
 
 
 class LimiterFactory:
