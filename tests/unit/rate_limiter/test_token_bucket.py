@@ -1,6 +1,18 @@
 import asyncio
 
+import pytest
+
 from gateway.rate_limiter.token_bucket import TokenBucketLimiter
+
+
+async def test_rejects_non_positive_capacity(redis_client):
+    with pytest.raises(ValueError, match="capacity"):
+        TokenBucketLimiter(redis_client, capacity=0, refill_rate_per_second=1.0)
+
+
+async def test_rejects_negative_refill_rate(redis_client):
+    with pytest.raises(ValueError, match="refill_rate_per_second"):
+        TokenBucketLimiter(redis_client, capacity=1, refill_rate_per_second=-1.0)
 
 
 async def test_allows_up_to_capacity_then_denies(redis_client):

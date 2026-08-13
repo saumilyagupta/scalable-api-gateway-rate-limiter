@@ -1,6 +1,18 @@
 import asyncio
 
+import pytest
+
 from gateway.rate_limiter.sliding_window_log import SlidingWindowLogLimiter
+
+
+async def test_rejects_non_positive_limit(redis_client):
+    with pytest.raises(ValueError, match="limit"):
+        SlidingWindowLogLimiter(redis_client, limit=0, window_seconds=1)
+
+
+async def test_rejects_non_positive_window_seconds(redis_client):
+    with pytest.raises(ValueError, match="window_seconds"):
+        SlidingWindowLogLimiter(redis_client, limit=1, window_seconds=0)
 
 
 async def test_allows_up_to_limit_then_denies(redis_client):

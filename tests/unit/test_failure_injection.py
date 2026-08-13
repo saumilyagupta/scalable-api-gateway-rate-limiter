@@ -1,5 +1,4 @@
 import asyncio
-import os
 
 import pytest
 
@@ -28,3 +27,17 @@ async def test_adds_latency(monkeypatch):
     await maybe_inject_failure()
     elapsed = asyncio.get_event_loop().time() - start
     assert elapsed >= 0.045
+
+
+async def test_uses_defaults_when_env_vars_unset(monkeypatch):
+    monkeypatch.delenv("FAILURE_RATE", raising=False)
+    monkeypatch.delenv("EXTRA_LATENCY_MS", raising=False)
+    # Defaults are 0.0 for both -- should never raise or sleep meaningfully.
+    await maybe_inject_failure()
+
+
+async def test_falls_back_to_default_when_env_var_is_malformed(monkeypatch):
+    monkeypatch.setenv("FAILURE_RATE", "not-a-float")
+    monkeypatch.setenv("EXTRA_LATENCY_MS", "also-not-a-float")
+    # Malformed values fall back to 0.0, not a crash.
+    await maybe_inject_failure()
