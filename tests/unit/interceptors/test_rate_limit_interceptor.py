@@ -54,7 +54,9 @@ async def test_denies_without_calling_continuation_when_over_limit():
     assert handler.request_streaming is False
     assert handler.response_streaming is False
 
-    context = AsyncMock()
+    # MagicMock, not AsyncMock: set_trailing_metadata() is synchronous on the
+    # real grpc.aio.ServicerContext -- only abort() below is actually async.
+    context = MagicMock()
     context.abort = AsyncMock(side_effect=grpc.RpcError())
     with pytest.raises(grpc.RpcError):
         await handler.unary_unary(MagicMock(), context)
