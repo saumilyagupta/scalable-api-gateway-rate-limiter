@@ -1,8 +1,11 @@
 services:
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
 
   echo-service:
     build:
@@ -13,8 +16,14 @@ services:
       GRPC_PORT: "60051"
       FAILURE_RATE: "0"
       EXTRA_LATENCY_MS: "0"
-    ports:
-      - "60051:60051"
+    # No host port publish: only consumed internally by gateway-1/gateway-2
+    # over the compose network, and publishing risks colliding with an
+    # unrelated host process on this port.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 60051), timeout=2)"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
 
   greeter-service:
     build:
@@ -25,8 +34,13 @@ services:
       GRPC_PORT: "60052"
       FAILURE_RATE: "0"
       EXTRA_LATENCY_MS: "0"
-    ports:
-      - "60052:60052"
+    # No host port publish: only consumed internally by gateway-1/gateway-2
+    # over the compose network.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 60052), timeout=2)"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
 
   gateway-1:
     build:
@@ -43,9 +57,12 @@ services:
       - "50051:50051"
       - "9101:9101"
     depends_on:
-      - redis
-      - echo-service
-      - greeter-service
+      redis:
+        condition: service_healthy
+      echo-service:
+        condition: service_healthy
+      greeter-service:
+        condition: service_healthy
 
   gateway-2:
     build:
@@ -62,9 +79,12 @@ services:
       - "50052:50052"
       - "9102:9102"
     depends_on:
-      - redis
-      - echo-service
-      - greeter-service
+      redis:
+        condition: service_healthy
+      echo-service:
+        condition: service_healthy
+      greeter-service:
+        condition: service_healthy
 
   prometheus:
     image: prom/prometheus:v2.54.1
