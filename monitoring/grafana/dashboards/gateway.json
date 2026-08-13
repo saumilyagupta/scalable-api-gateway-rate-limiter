@@ -1,0 +1,40 @@
+{
+  "title": "API Gateway",
+  "uid": "gateway-overview",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "graph",
+      "title": "Request rate (req/s)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "sum(rate(gateway_request_latency_seconds_count[1m])) by (method)" }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "p99 latency (s)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "histogram_quantile(0.99, sum(rate(gateway_request_latency_seconds_bucket[1m])) by (le, method))" }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Rate limit denials",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "sum(rate(gateway_rate_limit_decisions_total{decision=\"denied\"}[1m])) by (method)" }
+      ]
+    },
+    {
+      "type": "graph",
+      "title": "Circuit breaker transitions",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        { "expr": "sum(rate(gateway_breaker_state_transitions_total[1m])) by (breaker, state)" }
+      ]
+    }
+  ]
+}
