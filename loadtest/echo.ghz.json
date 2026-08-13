@@ -1,0 +1,9 @@
+{
+  "proto": "protos/demo.proto",
+  "call": "demo.Echo/Echo",
+  "data": { "message": "hello" },
+  "metadata": { "api-key": "free-loadtest-client" },
+  "insecure": true,
+  "total": 20000,
+  "concurrency": 30
+}
