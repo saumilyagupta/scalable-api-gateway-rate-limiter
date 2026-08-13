@@ -1,4 +1,13 @@
 policies:
+  # Listed before the general "free-" rule so it wins first-match-wins
+  # resolution for the loadtest/ scenario's client key -- keeps the
+  # benchmark measuring gateway/network throughput instead of rate-limit
+  # denials, without loosening the regular free-tier policy below.
+  - client_key_prefix: "free-loadtest-"
+    method: "/demo.Echo/Echo"
+    algorithm: token_bucket
+    limit: 5000
+    refill_rate_per_second: 5000
   - client_key_prefix: "free-"
     method: "/demo.Echo/Echo"
     algorithm: token_bucket
