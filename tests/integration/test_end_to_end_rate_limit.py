@@ -1,3 +1,8 @@
+"""Exercises the real rate-limit path (interceptor, factory, policy registry,
+token-bucket limiter) against a real Redis testcontainer. Deliberately uses a
+direct Echo servicer, not EchoProxyServicer -- upstream proxying and circuit
+breaker behavior are covered separately (see test_failure_injection.py)."""
+
 import grpc
 import pytest
 
