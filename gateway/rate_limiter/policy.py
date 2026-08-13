@@ -38,10 +38,16 @@ class PolicyRegistry:
         self._load()
 
     def _load(self) -> None:
+        # Parse into locals first, only assign to self.* once everything below
+        # has succeeded -- otherwise a malformed edit (e.g. default: missing a
+        # required key) could reassign self._policies from the new file while
+        # self._default/self._mtime stay on the old one, leaving resolve() in
+        # a half-migrated state that's never corrected by a later good edit
+        # (since self._mtime would already reflect this attempt's read time).
         with open(self._path) as f:
             raw = yaml.safe_load(f)
 
-        self._policies = [
+        policies = [
             Policy(
                 client_key_prefix=p["client_key_prefix"],
                 method=p["method"],
@@ -54,7 +60,7 @@ class PolicyRegistry:
         ]
 
         default_raw = raw["default"]
-        self._default = Policy(
+        default = Policy(
             client_key_prefix="",
             method="*",
             algorithm=default_raw["algorithm"],
@@ -62,6 +68,9 @@ class PolicyRegistry:
             refill_rate_per_second=default_raw.get("refill_rate_per_second"),
             window_seconds=default_raw.get("window_seconds"),
         )
+
+        self._policies = policies
+        self._default = default
         self._mtime = os.path.getmtime(self._path)
 
     def resolve(self, client_key: str, method: str) -> Policy:
@@ -88,8 +97,20 @@ class PolicyRegistry:
                 )
                 continue
             if current_mtime != self._mtime:
-                self._load()
-                logger.info("reloaded policies from %s", self._path)
+                try:
+                    self._load()
+                except (OSError, yaml.YAMLError, KeyError, TypeError) as exc:
+                    # A malformed edit must not kill this background task --
+                    # without this, hot-reload silently stops forever for
+                    # the life of the process, serving whatever policies
+                    # were last valid with no further chance to recover.
+                    logger.warning(
+                        "failed to reload policies from %s, keeping last-known-good: %s",
+                        self._path,
+                        exc,
+                    )
+                else:
+                    logger.info("reloaded policies from %s", self._path)
 
     def stop_watching(self) -> None:
         self._watching = False

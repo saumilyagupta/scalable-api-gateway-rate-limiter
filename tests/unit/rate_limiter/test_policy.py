@@ -111,3 +111,32 @@ async def test_keeps_serving_last_known_policies_when_file_becomes_unreachable(t
     finally:
         registry.stop_watching()
         watch_task.cancel()
+
+
+async def test_survives_and_recovers_from_a_malformed_reload(tmp_path):
+    path = tmp_path / "policies.yaml"
+    _write(path, YAML_CONTENT)
+    registry = PolicyRegistry(str(path), poll_interval_seconds=0.05)
+    watch_task = asyncio.create_task(registry.start_watching())
+    try:
+        # default: missing "algorithm" -> _load() raises KeyError mid-parse.
+        malformed = YAML_CONTENT.replace("  algorithm: token_bucket\n  limit: 20", "  limit: 20")
+        time.sleep(0.05)
+        _write(path, malformed)
+        await asyncio.sleep(0.2)
+
+        assert not watch_task.done()  # loop survived the bad edit
+        # Still serving the last-known-good policy, not a half-migrated one.
+        assert registry.resolve("free-client-1", "/demo.Echo/Echo").limit == 50
+        assert registry.resolve("unknown-client", "/demo.Echo/Echo").limit == 20
+
+        # A subsequent good edit recovers -- proves the loop keeps retrying
+        # the same malformed mtime rather than giving up after one failure.
+        fixed = YAML_CONTENT.replace("limit: 50", "limit: 888")
+        time.sleep(0.05)
+        _write(path, fixed)
+        await asyncio.sleep(0.2)
+        assert registry.resolve("free-client-1", "/demo.Echo/Echo").limit == 888
+    finally:
+        registry.stop_watching()
+        watch_task.cancel()
